@@ -242,7 +242,117 @@ pencilManager.setLaserMode(1)  // ON
 pencilManager.setLaserMode(0)  // OFF
 ```
 
-## 2. Vivo PenEngine SDK
+### 1.11 OplusLaserPointerController (レーザーポインター)
+
+**パッケージ**: `com.android.server.input`
+**ソース**: `oplus-services.jar`
+
+```java
+public class OplusLaserPointerController {
+    // レーザーモード定数
+    public static final int MODE_LASER_POINT = 0;      // ポイントモード
+    public static final int MODE_LASER_CURSORLINE = 1; // カーソル線モード
+    
+    // ペン接続状態
+    public static final int PEN_DISCONNECT = 0;
+    public static final int PEN_CONNECT = 2;
+    
+    // スキャンコード (ボタンイベント)
+    public static final int SCAN_CODE_LONG_PRESS = 189;    // 長押し
+    public static final int SCAN_CODE_DOUBLE_CLICK = 190;  // ダブルクリック
+    
+    // Settings.Global キー
+    // ipe_setting_only_laser_enable - レーザー有効化
+    // ipe_pencil_connect_state - ペン接続状態
+    // ipe_laser_mode - レーザーモード
+    
+    // PencilManagerを使用した振動
+    private void startVibration() {
+        mPencilManager.startVibration();
+    }
+    
+    // レーザーモード変更通知
+    private void sendModeToPencilManager(int mode) {
+        mPencilManager.setLaserMode(mode);
+    }
+}
+```
+
+### 1.12 OplusPenGestureManager (ペンジェスチャー)
+
+**パッケージ**: `com.android.server.oplus.input.exinputservice.globalgesture`
+**ソース**: `oplus-services.jar`
+
+```java
+public class OplusPenGestureManager {
+    // スクリーンショット設定
+    public static final int PEN_SCREENSHOT_SWITCH_OPEN = 1;
+    public static final int PEN_SCREENSHOT_SWITCH_CLOSE = 2;
+    
+    // Settings.Global キー
+    // ipe_pencil_swipe_function - ペンスワイプ機能設定
+    
+    // スタイラスイベント判定
+    private boolean isStylusEvent(MotionEvent event) {
+        int tool = event.getToolType(0);
+        return tool == 2 || tool == 4;  // STYLUS or ERASER
+    }
+    
+    // ジェスチャー開始エリア (右上隅)
+    // 画面右上から50dp四方でスワイプ開始
+}
+```
+
+### 1.13 Haptic Feedback API
+
+**パッケージ**: `com.android.server.vibrator`
+**ソース**: `oplus-services.jar`
+
+```java
+// WaveformエフェクトID (RTP)
+public class VibrationEffectConvertor {
+    // キーボード振動
+    public static final int RTP_INDEX_KEYBOARD_WEAK = 110;
+    public static final int RTP_INDEX_KEYBOARD_MEDIUM = 111;
+    public static final int RTP_INDEX_KEYBOARD_STRONG = 112;
+    
+    // エミュレーションキーボード
+    public static final int RTP_INDEX_EMULATION_KEYBOARD_DOWN = 302;
+    public static final int RTP_INDEX_EMULATION_KEYBOARD_UP = 303;
+    
+    // 汎用波形
+    public static final int WAVEFORM_INDEX_WEAKEST_SHORT = 1;
+    public static final int WAVEFORM_INDEX_WEAK_SHORT = 2;
+    public static final int WAVEFORM_INDEX_STRONG_GRANULAR = 6;
+    public static final int WAVEFORM_INDEX_WEAK_GRANULAR = 7;
+}
+
+// ハプティックフィードバック定数
+public class OplusHapticFeedbackVibrationProvider {
+    // 標準フィードバック
+    // 0: VIRTUAL_KEY
+    // 1: LONG_PRESS
+    // 3-5: 各種タッチ
+    
+    // OPLUS拡張フィードバック
+    // 300: LONG_VIBRATE
+    // 301: KEYBOARD_TOUCH
+    // 305: 特殊効果 (effectId=152)
+    // 10001: 特殊効果 (effectId=70)
+}
+
+// LinearmotorVibratorService
+public class LinearmotorVibratorService {
+    void vibrate(int uid, String opPkg, WaveformEffect we, IBinder token);
+    void cancelVibrate(WaveformEffect we, IBinder token);
+    void setVibratorStrength(int strength);
+    void setVibratorTouchStyle(int style);
+    int getVibratorTouchStyle();
+    void updateVibrationAmplitude(int uid, String opPkg, float amplitudeRatio);
+}
+```
+
+---
 
 **パッケージ**: `com.vivo.penengine`, `com.vivo.bluetoothpen`, `com.vivo.penalgoengine`
 **ソース**: JNotes (`com.jideos.jnotes_3.2.0.1.apk`)
@@ -518,6 +628,21 @@ public class InstantShapeGenerator {
 | `IRichtapCallback.java` | `/stylus_sdk/oplus/richtap/` |
 | `IOplusVibrator.java` | `/stylus_sdk/oplus/vibrator/` |
 | `ILinearMotorVibrator.java` | `/stylus_sdk/oplus/vibrator/` |
+| `LinearmotorVibratorService.java` | `/stylus_sdk/oplus/vibrator/` |
+| `IOplusVibratorCallback.java` | `/stylus_sdk/oplus/vibrator/` |
+
+### OPLUS Input Services (oplus-services.jar)
+| ファイル | パス |
+|---------|------|
+| `OplusLaserPointerController.java` | `/stylus_sdk/oplus/input/` |
+| `OplusPenGestureManager.java` | `/stylus_sdk/oplus/input/` |
+
+### OPLUS Haptic Feedback (oplus-services.jar)
+| ファイル | パス |
+|---------|------|
+| `VibrationEffectConvertor.java` | `/stylus_sdk/oplus/haptic/` |
+| `OplusHapticFeedbackVibrationProvider.java` | `/stylus_sdk/oplus/haptic/` |
+| `WaveformEffectParser.java` | `/stylus_sdk/oplus/haptic/` |
 
 ### OPLUS VFX SDK (OnePlus Note APK)
 | ファイル | パス |
@@ -552,13 +677,17 @@ public class InstantShapeGenerator {
 |-----|-----------|
 | OPLUS IPE Manager | 5 |
 | OPLUS System Services | 4 |
+| OPLUS Vibrator HAL | 4 |
+| OPLUS Input Services | 2 |
+| OPLUS Haptic Feedback | 3 |
 | OPLUS VFX SDK | 41 |
 | Vivo PenEngine | 17 |
 | Huawei PenKit | 18 |
-| **合計** | **87** |
+| **合計** | **94** |
 
 ---
 
 *Generated: 2025-12-05*
 *Source: OnePlus Note APK, JNotes APK, oplus-services.jar*
+
 
