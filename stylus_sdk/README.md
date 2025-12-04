@@ -14,6 +14,15 @@ stylus_sdk/
 │   │   ├── ISdkAidlInterface.java  # AIDL Interface
 │   │   ├── ISDKAidlCallback.java   # AIDL Callback
 │   │   └── a.java                  # PencilManager
+│   ├── system_services/     # システムサービス (oplus-services.jar)
+│   │   ├── PencilManager.java      # システム用PencilManager
+│   │   └── ISystemAidlInterface.java
+│   ├── richtap/             # RichTap振動 (AAC)
+│   │   ├── IRichtapVibrator.java   # 高度な振動制御
+│   │   └── IRichtapCallback.java
+│   ├── vibrator/            # OPLUS振動HAL
+│   │   ├── IOplusVibrator.java     # リニアモーター制御
+│   │   └── ILinearMotorVibrator.java
 │   └── vfxsdk/              # VFX Doodle Engine SDK
 │       ├── StylusManager.java
 │       ├── StylusInterface.java
@@ -54,6 +63,13 @@ stylus_sdk/
 | `ISDKAidlCallback` | `onConnectionChanged()`, `onVibrationSwitchStateChange()` |
 | `Vibration` | PENCIL, ERASER, BALLPEN, PEN |
 
+### OPLUS RichTap/Vibrator HAL
+| クラス | 機能 |
+|-------|------|
+| `IRichtapVibrator` | `perform()`, `performHe()`, `on()`, `off()`, `setAmplitude()` |
+| `IOplusVibrator` | `linearMotorVibratorOn()`, `setVibratorTouchStyle()` |
+| `PencilManager` (system) | `startVibration()`, `setLaserMode()` |
+
 ### Vivo BluetoothPen
 | クラス | 機能 |
 |-------|------|
@@ -72,9 +88,15 @@ stylus_sdk/
 
 ## サービス接続情報
 
-### OPLUS
+### OPLUS (アプリ用)
 ```kotlin
 Intent("com.oplus.ipemanager.ACTION.PENCIL_SDK")
+    .setPackage("com.oplus.ipemanager")
+```
+
+### OPLUS (システム用)
+```kotlin
+Intent("com.oplus.ipemanager.ACTION.PENCIL_SYSTEM")
     .setPackage("com.oplus.ipemanager")
 ```
 
@@ -111,5 +133,7 @@ enum class VibrationType {
 ```
 
 ---
-*ファイル数: 81*
+*ファイル数: 87*
 *抽出日: 2025-12-05*
+*ソース: OnePlus Note APK, JNotes APK, oplus-services.jar*
+

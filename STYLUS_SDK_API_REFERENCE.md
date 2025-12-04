@@ -127,7 +127,120 @@ public class StylusManager {
 }
 ```
 
----
+### 1.7 OPLUS System Services (oplus-services.jar)
+
+**ソース**: `oplus-services.jar` (ColorOS/OxygenOS システムサービス)
+
+#### PencilManager.java (システム用)
+```java
+package com.oplus.ipemanager.sdk;
+
+public class PencilManager {
+    // サービス接続
+    // Action: "com.oplus.ipemanager.ACTION.PENCIL_SYSTEM"
+    // Package: "com.oplus.ipemanager"
+    
+    // 振動開始 (type=5 固定)
+    public void startVibration();
+    
+    // レーザーモード設定
+    public void setLaserMode(int mode);
+}
+```
+
+#### ISystemAidlInterface.java (AIDL)
+```java
+package com.oplus.ipemanager.sdk;
+
+public interface ISystemAidlInterface extends IInterface {
+    String DESCRIPTOR = "com.oplus.ipemanager.sdk.ISystemAidlInterface";
+    
+    void startVibration(int type);  // 振動開始
+    void setLaserMode(int mode);    // レーザーモード
+}
+```
+
+### 1.8 RichTap Vibrator SDK (AAC)
+
+**パッケージ**: `vendor.aac.hardware.richtap.vibrator`
+**ソース**: `oplus-services.jar`
+
+```java
+public interface IRichtapVibrator extends IInterface {
+    // 基本制御
+    void init(IRichtapCallback callback);
+    void on(int timeoutMs, IRichtapCallback callback);
+    void off(IRichtapCallback callback);
+    void stop(IRichtapCallback callback);
+    
+    // エフェクト再生
+    int perform(int effect_id, byte strength, IRichtapCallback callback);
+    void performEnvelope(int[] envInfo, boolean fastFlag, IRichtapCallback callback);
+    void performRtp(ParcelFileDescriptor hdl, IRichtapCallback callback);
+    
+    // HE (Haptic Engine) パラメータ
+    void performHe(int looper, int interval, int amplitude, int freq, int[] he, IRichtapCallback callback);
+    void performHeParam(int interval, int amplitude, int freq, IRichtapCallback callback);
+    
+    // 設定
+    void setAmplitude(int amplitude, IRichtapCallback callback);
+    void setDynamicScale(int scale, IRichtapCallback callback);
+    void setF0(int f0, IRichtapCallback callback);  // 共振周波数
+    void setHapticParam(int[] data, int length, IRichtapCallback callback);
+}
+```
+
+### 1.9 OPLUS Vibrator HAL
+
+**パッケージ**: `vendor.oplus.hardware.oplusvibrator`
+**ソース**: `oplus-services.jar`
+
+```java
+public interface IOplusVibrator extends IInterface {
+    // RichTap継承メソッド + 追加機能
+    
+    // リニアモーター振動
+    void linearMotorVibratorOn(int waveform_id, int amplitude, boolean is_rtp_mode);
+    void linearMotorVibratorOff();
+    
+    // キャリブレーション
+    void startCalibrate();
+    int[] getCalibrateResults();
+    
+    // タッチスタイル
+    void setVibratorTouchStyle(int touchStyle);
+    int getVibratorTouchStyle();
+    
+    // ゲーム用振動
+    void writeGunType(int gunType);
+    void writeGunMode(int gunMode);
+    void writeBulletNum(int bulletNum);
+    void writeHapticAudio(String buffer);
+    
+    // 電源設定
+    void setPowerOnVibratorSwitch(String data);
+    void setVmax(int vmax);
+    
+    // サポート機能
+    byte[] getSupportFeatures();
+    int getStatus();
+}
+```
+
+### 1.10 使用例 (システムサービス)
+```kotlin
+// システム用PencilService接続
+val intent = Intent("com.oplus.ipemanager.ACTION.PENCIL_SYSTEM")
+intent.setPackage("com.oplus.ipemanager")
+context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+
+// 振動開始
+pencilManager.startVibration()  // type=5 (VIBRATION定数)
+
+// レーザーポインターモード
+pencilManager.setLaserMode(1)  // ON
+pencilManager.setLaserMode(0)  // OFF
+```
 
 ## 2. Vivo PenEngine SDK
 
@@ -365,43 +478,87 @@ public class InstantShapeGenerator {
 
 ## 4. SDK比較表
 
-| 機能 | OPLUS IPE | Vivo PenEngine | Huawei PenKit |
-|-----|-----------|----------------|---------------|
-| **振動フィードバック** | ✅ | ✅ | ❌ |
-| **振動タイプ (ペン種別)** | 5種類 | 3段階強度 | ❌ |
-| **筆圧検知** | ✅ | ✅ | ✅ |
-| **傾き検知** | ❌ | ❌ | ✅ |
-| **軌跡予測** | ✅ (VFX SDK) | ✅ (TrackPredCore) | ✅ |
-| **図形認識** | ❌ | ✅ (IAlgoService) | ✅ (InstantShape) |
-| **Bluetooth接続** | ❌ | ✅ | ❌ |
-| **バッテリー監視** | ❌ | ✅ | ❌ |
-| **IMUセンサー** | ❌ | ✅ | ❌ |
-| **E-inkサポート** | ❌ | ❌ | ✅ |
+| 機能 | OPLUS IPE | OPLUS RichTap/HAL | Vivo PenEngine | Huawei PenKit |
+|-----|-----------|-------------------|----------------|---------------|
+| **振動フィードバック** | ✅ | ✅ | ✅ | ❌ |
+| **振動タイプ (ペン種別)** | 5種類 | エフェクトID | 3段階強度 | ❌ |
+| **HE振動パラメータ** | ❌ | ✅ (amplitude/freq/interval) | ❌ | ❌ |
+| **RTPファイル再生** | ❌ | ✅ | ❌ | ❌ |
+| **筆圧検知** | ✅ | ❌ | ✅ | ✅ |
+| **傾き検知** | ❌ | ❌ | ❌ | ✅ |
+| **軌跡予測** | ✅ (VFX SDK) | ❌ | ✅ (TrackPredCore) | ✅ |
+| **図形認識** | ❌ | ❌ | ✅ (IAlgoService) | ✅ (InstantShape) |
+| **Bluetooth接続** | ❌ | ❌ | ✅ | ❌ |
+| **バッテリー監視** | ❌ | ❌ | ✅ | ❌ |
+| **IMUセンサー** | ❌ | ❌ | ✅ | ❌ |
+| **E-inkサポート** | ❌ | ❌ | ❌ | ✅ |
+| **リニアモーター制御** | ❌ | ✅ | ❌ | ❌ |
+| **タッチスタイル** | ❌ | ✅ | ❌ | ❌ |
+| **レーザーモード** | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
 ## ファイル一覧
 
-### OPLUS IPE Manager SDK
-- `/decompiled/oneplus_note/sources/com/oplus/ipemanager/sdk/IpeFeature.java`
-- `/decompiled/oneplus_note/sources/com/oplus/ipemanager/sdk/Vibration.java`
-- `/decompiled/oneplus_note/sources/com/oplus/ipemanager/sdk/ISdkAidlInterface.java`
-- `/decompiled/oneplus_note/sources/com/oplus/ipemanager/sdk/ISDKAidlCallback.java`
-- `/decompiled/oneplus_note/sources/com/oplus/ipemanager/sdk/a.java` (PencilManager)
-- `/decompiled/oneplus_note/sources/com/oplusos/vfxsdk/doodleengine/stylus/StylusManager.java`
+### OPLUS IPE Manager SDK (OnePlus Note APK)
+| ファイル | パス |
+|---------|------|
+| `IpeFeature.java` | `/stylus_sdk/oplus/ipemanager/` |
+| `Vibration.java` | `/stylus_sdk/oplus/ipemanager/` |
+| `ISdkAidlInterface.java` | `/stylus_sdk/oplus/ipemanager/` |
+| `ISDKAidlCallback.java` | `/stylus_sdk/oplus/ipemanager/` |
+| `a.java` (PencilManager) | `/stylus_sdk/oplus/ipemanager/` |
+
+### OPLUS System Services (oplus-services.jar)
+| ファイル | パス |
+|---------|------|
+| `PencilManager.java` | `/stylus_sdk/oplus/system_services/` |
+| `ISystemAidlInterface.java` | `/stylus_sdk/oplus/system_services/` |
+| `IRichtapVibrator.java` | `/stylus_sdk/oplus/richtap/` |
+| `IRichtapCallback.java` | `/stylus_sdk/oplus/richtap/` |
+| `IOplusVibrator.java` | `/stylus_sdk/oplus/vibrator/` |
+| `ILinearMotorVibrator.java` | `/stylus_sdk/oplus/vibrator/` |
+
+### OPLUS VFX SDK (OnePlus Note APK)
+| ファイル | パス |
+|---------|------|
+| `StylusManager.java` | `/stylus_sdk/oplus/vfxsdk/` |
+| `VibrationType.java` | `/stylus_sdk/oplus/vfxsdk/` |
+| `StylusInterface.java` | `/stylus_sdk/oplus/vfxsdk/` |
+| その他 38ファイル | `/stylus_sdk/oplus/vfxsdk/` |
 
 ### Vivo PenEngine SDK
-- `/decompiled/jnotes/sources/com/vivo/penengine/impl/VivoStylusGestureManagerImpl.java`
-- `/decompiled/jnotes/sources/com/vivo/bluetoothpen/IBluetoothPenCallback.java`
-- `/decompiled/jnotes/sources/com/vivo/bluetoothpen/OnPenStateListener.java`
-- `/decompiled/jnotes/sources/com/vivo/trackpredictor/core/TrackPredCore.java`
-- `/decompiled/jnotes/sources/com/vivo/penalgoengine/IAlgoService.java`
+| ファイル | パス |
+|---------|------|
+| `IBluetoothPenCallback.java` | `/stylus_sdk/vivo/bluetoothpen/` |
+| `OnPenStateListener.java` | `/stylus_sdk/vivo/bluetoothpen/` |
+| `VivoStylusGestureManagerImpl.java` | `/stylus_sdk/vivo/penengine/` |
+| `IAlgoService.java` | `/stylus_sdk/vivo/penalgoengine/` |
+| `TrackPredCore.java` | `/stylus_sdk/vivo/trackpredictor/` |
 
 ### Huawei PenKit SDK
-- `/decompiled/jnotes/sources/com/huawei/stylus/penengine/HwPenEngineManager.java`
-- `/decompiled/jnotes/sources/com/huawei/stylus/penengine/view/HwHandWritingView.java`
-- `/decompiled/jnotes/sources/com/huawei/stylus/penengine/instantshape/InstantShapeGenerator.java`
+| ファイル | パス |
+|---------|------|
+| `HwPenEngineManager.java` | `/stylus_sdk/huawei/penengine/` |
+| `HwHandWritingView.java` | `/stylus_sdk/huawei/penengine/` |
+| `InstantShapeGenerator.java` | `/stylus_sdk/huawei/penengine/` |
+| その他 15ファイル | `/stylus_sdk/huawei/penengine/` |
+
+---
+
+## 抽出ファイル統計
+
+| SDK | ファイル数 |
+|-----|-----------|
+| OPLUS IPE Manager | 5 |
+| OPLUS System Services | 4 |
+| OPLUS VFX SDK | 41 |
+| Vivo PenEngine | 17 |
+| Huawei PenKit | 18 |
+| **合計** | **87** |
 
 ---
 
 *Generated: 2025-12-05*
+*Source: OnePlus Note APK, JNotes APK, oplus-services.jar*
+
